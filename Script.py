@@ -214,32 +214,33 @@ from tensorflow.keras.utils import to_categorical
 
 import os
 
-# On sépare les données en entrainement et test
+# Splitting Data
 X_train, X_test, y_train, y_test = train_test_split(train_images, train_labels, test_size = 0.15)
 
-#Puis encore en validation set
+# Then into validation set
 X_train, X_validation, y_train, y_validation = train_test_split(X_train, y_train, test_size = 0.1)
 
-batch_size = 128 # You can try 64 or 128 if you'd like to
+batch_size = 128 # You can try 64 or 32 if you'd like to
 num_classes = 10
 epochs = 10 # loss function value will be stabilized after 93rd epoch# To save the model:
 lr = 0.001
 
-input_shape = (28, 28, 1)
+input_shape = (28, 28, 1) # 3 dimensional image
 X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], X_train.shape[2], 1)
 
 X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], X_test.shape[2], 1)
 
 X_validation = X_validation.reshape(X_validation.shape[0], X_validation.shape[1], X_validation.shape[2], 1)
 
+# Making sure everything is good
 print('X_train shape: ', X_train.shape)
 print('X_test shape: ', X_test.shape)
 print('X_validation shape: ', X_validation.shape)
 
-#Sequential pour concatener les couches qu'on va ajouter par la suite
+#Sequential to concatenate the layers we are going to add
 model = Sequential()
 
-#Première couche convolutive avec 32 filtre 3*3
+#First convolutive layer with 32 Filters 3*3
 model.add(Conv2D(32, (3, 3), padding="same", kernel_regularizer=l2(0.01), input_shape=input_shape))
 model.add(Activation("relu"))
 
@@ -249,32 +250,30 @@ model.add(Activation("relu"))
 #Ceci, permet à chaque couche d’apprendre sur une distribution d’entrées plus stable, ce qui accélérerait la formation du réseau.
 model.add(BatchNormalization(axis=-1))
 
-#Réduction de dimension en sélectionnant le Max sur chaque fenêtre 2*2
+#Dimensionality reduction by replacing with the maximum on each 2*2 window
 model.add(MaxPooling2D(pool_size=(2, 2)))
-#ce Dropout enlève 1/4 des output de la dernière couche afin d'éviter l'overfitting
+#Dropout 1/4 of the nodes we have in order to avoid overfitting
 model.add(Dropout(0.25))
 
-#On applati no couches
 model.add(Flatten())
 
-#On ajoute une couche Dense normale avec 128 neurones puis un dropout d'un tiers
+#A normal dense layer with 64 nodes
 model.add(Dense(64))
 model.add(Activation("relu"))
 model.add(Dropout(0.3))
 
-#Et finalement une couche normale avec le nombre d'outputs le nombre de classes qu'on a
+#And finally the output layer
 num_classes = 10
 model.add(Dense(num_classes))
 model.add(Activation("softmax"))
-#opt = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False) #on parametre ici l'optimiseur qui va effectuer la descente de gradient
 opt = Adam(lr=lr)
 
-model.compile(loss='categorical_crossentropy', #il faut maintenant compiler le modèle en spécifiant les métriques que l'on veut regarder
+model.compile(loss='categorical_crossentropy', #Now it is time to compile the model specifying the metrics we want to evaluate
               optimizer=opt,
               metrics=['accuracy'])
 
-y_train_c = to_categorical(y_train, num_classes=10, dtype='float32') #nous sommes dans un problème de classification, il faut donc définir notre cible comme des catégories
-early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3) # cette fonction permet d'arrêter l'entrainement s'il tagne
+y_train_c = to_categorical(y_train, num_classes=10, dtype='float32') #Categorizing the labels
+early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3) # To stop the algorithm if it takes too long
 
 history=model.fit(X_train.astype("float32"), y_train_c,
               batch_size=batch_size,
@@ -282,7 +281,7 @@ history=model.fit(X_train.astype("float32"), y_train_c,
               verbose=1,
               validation_data=(X_test.astype("float32"), to_categorical(y_test)),
               shuffle=True,
-              callbacks=[early_stop])# c'est ici que l'on lance l'entrainement de notre modèle. Si c'est un gros modèle, vous pouvez avoir interet à le faire tourner sur GPU
+              callbacks=[early_stop])# It would have been better if we launch the training on a GPU instead
 
 print(history.history)
 scores = model.evaluate(X_validation.astype("float32"), to_categorical(y_validation), verbose=0)
@@ -334,6 +333,7 @@ for i in range(0,25):
     plt.imshow(X_validation[i],cmap='Greys')
 plt.show()
 
+#Sophisticated visualization of the pourcentage of belonging to the categories assigned by the model to each image
 fig=plt.figure()
 k=0
 for i in range(10,16):
