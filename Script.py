@@ -1,4 +1,4 @@
-# sauvegarder et charger des workspaces python
+# save and load workspaces in python
 from __future__ import print_function
 import pickle
 
@@ -15,14 +15,17 @@ import pandas as pd
 
 import scipy
 
-# chargement:
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import chi2
+
+# loading:
 with open('C:/Users/Asus 6eme/Documents/Data/TP3-Final-cnn/dataset_TP3.pkl','rb') as f:train_images, train_labels = pickle.load(f)
 
 print(train_labels[8542])
 class_names = ['Tshirt', 'Pantalon', 'Pull', 'Robe', 'Veste',
                'Sandale', 'Chemise', 'Basket', 'Sac', 'Bottine']
 
-#affichage d'une image du jeu de données
+#showing an image from the data set
 fig=plt.figure()
 n=2175
 for i in range(n,n+25):
@@ -32,7 +35,7 @@ for i in range(n,n+25):
 plt.show()
 
 
-#on va binariser les images 
+#thresholding images (binarize them) 
 for i in range(60000):
     train_images[i]=1.0 * (train_images[i] > 16)
     #train_images[i]=1.0 * (train_images[i] > (np.max(train_images[i])/3))
@@ -56,9 +59,15 @@ plt.imshow(Ix+Iy)
 plt.show()
 
 
-##
 
-#On va maintenant décrire nos images à l'aide de la fonction regionprops
+#################################################
+#################################################
+#First method : Image processing
+#################################################
+#################################################
+
+
+#Extracting geometric descriptors using regionprops
 imgdata=np.zeros((60000,9))
 for i in range(60000):
     props = sm.regionprops_table(train_images[i], properties=['area', 'bbox_area','convex_area','eccentricity','equivalent_diameter','extent','major_axis_length','minor_axis_length','perimeter'])
@@ -72,18 +81,17 @@ for i in range(60000):
     imgdata[i][7]=float(props['minor_axis_length'])
     imgdata[i][8]=float(props['perimeter'])
     
-#On va essayer maintenant d'éliminer les mauvaises characteristiques
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import chi2
-
-#On va selectionner les 5 meilleures features
+#Selecting the 5 best features among the 9 computed
 imgdata_new = SelectKBest(chi2, k=5).fit_transform(imgdata, train_labels)
 
 #we will convert our data to a dataframe format
 df = pd.DataFrame(imgdata_new, columns=['feature1', 'feature2','feature3','feature4','feature5'])
 
-##
-# On sépare les données en entrainement et test
+###########################
+#Statistical learning
+###########################
+
+# Splitting Data
 X_train, X_test, y_train, y_test = train_test_split(df, train_labels, test_size = 0.25)
 
 print(X_train.shape, y_train.shape)
@@ -99,11 +107,9 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn import neural_network
 
-
-
-# On va définir plusieurs modèles pour voir lequel est le meilleur
-logistic_m = LogisticRegression() #régression linéair
-tree_m = sklearn.tree.DecisionTreeClassifier(max_depth=3) #arbre de décision
+# Defining classification models
+logistic_m = LogisticRegression() #linear regression
+tree_m = sklearn.tree.DecisionTreeClassifier(max_depth=3) #Decision tree
 gradient_descent_m=SGDClassifier()# stochastic gradient descent
 gradient_boosting_m=GradientBoostingClassifier()# gradient boosting
 knn_m = sklearn.neighbors.KNeighborsClassifier(n_neighbors=3)
@@ -112,9 +118,9 @@ neural_net_m = sklearn.neural_network.MLPClassifier(
     hidden_layer_sizes=(8,2),  activation='relu', solver='adam', alpha=0.002, batch_size='auto',
     learning_rate='constant', learning_rate_init=0.01, power_t=0.5, max_iter=2000, shuffle=True,
     random_state=9, tol=0.0001, verbose=False, warm_start=False, momentum=0.9, nesterovs_momentum=True,
-    early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08) #Réseau de neurones, on a ici spécifié tous les paramètres du réseau (possible avec n'importe quel modèle)
+    early_stopping=False, validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08) #Shallow neural network
 
-#on entraine nos modèles avec la méthode .fit() 
+#Training of the models using the method .fit() 
 model1 = logistic_m.fit(X_train, y_train)
 model2 = tree_m.fit(X_train, y_train)
 model3 = gradient_descent_m.fit(X_train, y_train)
@@ -124,7 +130,7 @@ model6 = svm_m.fit(X_train, y_train)
 model7 = neural_net_m.fit(X_train, y_train)
 
 
-# les prédictions s'effectuent simplement avec la méthode .predict()
+# predictions using the method .predict()
 predictions1 = logistic_m.predict(X_test)
 predictions2 = tree_m.predict(X_test)
 predictions3 = gradient_descent_m.predict(X_test)
@@ -133,8 +139,8 @@ predictions5 = knn_m.predict(X_test)
 predictions6 = svm_m.predict(X_test)
 predictions7 = neural_net_m.predict(X_test)
 
-#On calcule l'accuracy et l'erreur pour chaque modèle
-from sklearn.metrics import accuracy_score, mean_squared_error
+#Computing the accuracy of the models
+from sklearn.metrics import accuracy_score
 
 accuracy1 = accuracy_score(y_test,predictions1)
 accuracy2 = accuracy_score(y_test,predictions2)
@@ -144,14 +150,6 @@ accuracy5 = accuracy_score(y_test,predictions5)
 accuracy6 = accuracy_score(y_test,predictions6)
 accuracy7 = accuracy_score(y_test,predictions7)
 
-mse1 = mean_squared_error(y_test,predictions1)
-mse2 = mean_squared_error(y_test,predictions2)
-mse3 = mean_squared_error(y_test,predictions3)
-mse4 = mean_squared_error(y_test,predictions4)
-mse5 = mean_squared_error(y_test,predictions5)
-mse6 = mean_squared_error(y_test,predictions6)
-mse7 = mean_squared_error(y_test,predictions7)
-
 print(['Logitic regression',accuracy1])
 print(['Decision tree',accuracy2])
 print(['Gradient descent',accuracy3])
@@ -160,7 +158,7 @@ print(['Knn',accuracy5])
 print(['SVM',accuracy6])
 print(['Neural network',accuracy7])
 
-#Graphe d'accuracy
+#The accuracy's plot
 fig=plt.figure()
 plt.subplot(1,2,1)
 plt.bar([1,2,3,4,5,6,7],height=[accuracy1,accuracy2,accuracy3,accuracy4,accuracy5,accuracy6,accuracy7],tick_label=['Logitic \n regression', 'Decision \n tree', 'Gradient \n descent', 'Gradient \n boosting', 'Knn', 'SVM', 'Neural net'])
@@ -168,15 +166,8 @@ plt.title('models accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('model')
 
-#Graphe de MSE
-plt.subplot(1,2,2)
-plt.bar([1,2,3,4,5,6,7],height=[mse1,mse2,mse3,mse4,mse5,mse6,mse7],tick_label=['Logitic \n regression', 'Decision \n tree', 'Gradient \n descent', 'Gradient \n boosting', 'Knn', 'SVM', 'Neural net'])
-plt.title('models MSE')
-plt.ylabel('MSE')
-plt.xlabel('model')
-plt.show()
 
-# chargement:
+# Re-loading:
 with open('C:/Users/Asus 6eme/Documents/Data/TP3-Final-cnn/dataset_TP3.pkl','rb') as f:train_images, train_labels = pickle.load(f)
 
 #visualizing a sample of test data labelized
@@ -188,7 +179,15 @@ for i in range(0,25):
     plt.imshow(train_images[indexes[i]],cmap='Greys')
 plt.show()
 
-##
+
+
+
+###########################################################
+###########################################################
+#Second method : CNN
+###########################################################
+###########################################################
+
 
 from __future__ import print_function
 import pickle
@@ -199,7 +198,7 @@ from sklearn.model_selection import train_test_split
 
 import matplotlib.pyplot as plt
 
-# chargement:
+# Loading:
 with open('C:/Users/Asus 6eme/Documents/Data/TP3-Final-cnn/dataset_TP3.pkl','rb') as f:train_images, train_labels = pickle.load(f)
 
 import tensorflow as tf
@@ -215,32 +214,33 @@ from tensorflow.keras.utils import to_categorical
 
 import os
 
-# On sépare les données en entrainement et test
+# Splitting Data
 X_train, X_test, y_train, y_test = train_test_split(train_images, train_labels, test_size = 0.15)
 
-#Puis encore en validation set
+# Then into validation set
 X_train, X_validation, y_train, y_validation = train_test_split(X_train, y_train, test_size = 0.1)
 
-batch_size = 128 # You can try 64 or 128 if you'd like to
+batch_size = 128 # You can try 64 or 32 if you'd like to
 num_classes = 10
 epochs = 10 # loss function value will be stabilized after 93rd epoch# To save the model:
 lr = 0.001
 
-input_shape = (28, 28, 1)
+input_shape = (28, 28, 1) # 3 dimensional image
 X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], X_train.shape[2], 1)
 
 X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], X_test.shape[2], 1)
 
 X_validation = X_validation.reshape(X_validation.shape[0], X_validation.shape[1], X_validation.shape[2], 1)
 
+# Making sure everything is good
 print('X_train shape: ', X_train.shape)
 print('X_test shape: ', X_test.shape)
 print('X_validation shape: ', X_validation.shape)
 
-#Sequential pour concatener les couches qu'on va ajouter par la suite
+#Sequential to concatenate the layers we are going to add
 model = Sequential()
 
-#Première couche convolutive avec 32 filtre 3*3
+#First convolutive layer with 32 Filters 3*3
 model.add(Conv2D(32, (3, 3), padding="same", kernel_regularizer=l2(0.01), input_shape=input_shape))
 model.add(Activation("relu"))
 
@@ -250,32 +250,30 @@ model.add(Activation("relu"))
 #Ceci, permet à chaque couche d’apprendre sur une distribution d’entrées plus stable, ce qui accélérerait la formation du réseau.
 model.add(BatchNormalization(axis=-1))
 
-#Réduction de dimension en sélectionnant le Max sur chaque fenêtre 2*2
+#Dimensionality reduction by replacing with the maximum on each 2*2 window
 model.add(MaxPooling2D(pool_size=(2, 2)))
-#ce Dropout enlève 1/4 des output de la dernière couche afin d'éviter l'overfitting
+#Dropout 1/4 of the nodes we have in order to avoid overfitting
 model.add(Dropout(0.25))
 
-#On applati no couches
 model.add(Flatten())
 
-#On ajoute une couche Dense normale avec 128 neurones puis un dropout d'un tiers
+#A normal dense layer with 64 nodes
 model.add(Dense(64))
 model.add(Activation("relu"))
 model.add(Dropout(0.3))
 
-#Et finalement une couche normale avec le nombre d'outputs le nombre de classes qu'on a
+#And finally the output layer
 num_classes = 10
 model.add(Dense(num_classes))
 model.add(Activation("softmax"))
-#opt = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False) #on parametre ici l'optimiseur qui va effectuer la descente de gradient
 opt = Adam(lr=lr)
 
-model.compile(loss='categorical_crossentropy', #il faut maintenant compiler le modèle en spécifiant les métriques que l'on veut regarder
+model.compile(loss='categorical_crossentropy', #Now it is time to compile the model specifying the metrics we want to evaluate
               optimizer=opt,
               metrics=['accuracy'])
 
-y_train_c = to_categorical(y_train, num_classes=10, dtype='float32') #nous sommes dans un problème de classification, il faut donc définir notre cible comme des catégories
-early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3) # cette fonction permet d'arrêter l'entrainement s'il tagne
+y_train_c = to_categorical(y_train, num_classes=10, dtype='float32') #Categorizing the labels
+early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3) # To stop the algorithm if it takes too long
 
 history=model.fit(X_train.astype("float32"), y_train_c,
               batch_size=batch_size,
@@ -283,7 +281,7 @@ history=model.fit(X_train.astype("float32"), y_train_c,
               verbose=1,
               validation_data=(X_test.astype("float32"), to_categorical(y_test)),
               shuffle=True,
-              callbacks=[early_stop])# c'est ici que l'on lance l'entrainement de notre modèle. Si c'est un gros modèle, vous pouvez avoir interet à le faire tourner sur GPU
+              callbacks=[early_stop])# It would have been better if we launch the training on a GPU instead
 
 print(history.history)
 scores = model.evaluate(X_validation.astype("float32"), to_categorical(y_validation), verbose=0)
@@ -335,6 +333,7 @@ for i in range(0,25):
     plt.imshow(X_validation[i],cmap='Greys')
 plt.show()
 
+#Sophisticated visualization of the pourcentage of belonging to the categories assigned by the model to each image
 fig=plt.figure()
 k=0
 for i in range(10,16):
