@@ -13,3 +13,5 @@ The accuracy we could achieve using the geometric descriptors is not very good 6
 The report written using a Jupyter Notebook is in Frensh, it is the same as the pdf file rapport.pdf, it shows the important plots and images visualizations we have done in order to better communicate our results.
 
 Thank you for reading ^^
+
+<img src="1.jpg" alt="1"/>
